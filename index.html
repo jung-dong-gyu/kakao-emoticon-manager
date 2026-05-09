@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="이모티콘">
+<meta name="theme-color" content="#FEE500">
+<link rel="manifest" href="/manifest.json">
+<title>카카오 이모티콘 매니저</title>
+<style>
+/* ── RESET & VARIABLES ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --kakao: #FEE500;
+  --kakao-dark: #E6CF00;
+  --kakao-brown: #3C1E1E;
+  --bg: #F7F7F7;
+  --surface: #FFFFFF;
+  --border: #E8E8E8;
+  --text: #1A1A1A;
+  --text-sub: #888888;
+  --green: #00C471;
+  --red: #FF4B4B;
+  --blue: #3A86FF;
+  --orange: #FF8C42;
+  --radius: 16px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --tab-h: 72px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ── LAYOUT ── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 768px;
+  margin: 0 auto;
+}
+
+.header {
+  background: var(--kakao);
+  padding: calc(16px + var(--safe-top)) 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.header-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--kakao-brown);
+  letter-spacing: -0.5px;
+}
+.header-sub {
+  font-size: 13px;
+  color: var(--kakao-brown);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+.header-setting-btn {
+  background: rgba(0,0,0,0.1);
+  border: none;
+  border-radius: 50%;
+  width: 40px; height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px calc(var(--tab-h) + var(--safe-bottom) + 16px);
+}
+
+/* ── TAB BAR ── */
+.tab-bar {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 768px;
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px 4px;
+  color: var(--text-sub);
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.15s;
+  min-height: 44px;
+}
+.tab-item .icon { font-size: 24px; line-height: 1; }
+.tab-item.active { color: var(--kakao-brown); }
+.tab-item.active .icon { transform: scale(1.1); }
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.stat-num {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--kakao-brown);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 6px;
+}
+
+/* ── STATUS BADGE ── */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-drafting  { background: #F0F0F0; color: #666; }
+.badge-submitted { background: #E3F0FF; color: var(--blue); }
+.badge-reviewing { background: #FFF3E0; color: var(--orange); }
+.badge-approved  { background: #E8F8EF; color: var(--green); }
+.badge-rejected  { background: #FFE8E8; color: var(--red); }
+
+/* ── SERIES LIST ── */
+.series-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.series-item:last-child { border-bottom: none; }
+.series-thumb {
+  width: 56px; height: 56px;
+  border-radius: 12px;
+  background: var(--kakao);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.series-info { flex: 1; min-width: 0; }
+.series-name {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.series-date { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+.series-arrow { color: var(--text-sub); font-size: 18px; }
+
+/* ── CHECKLIST ── */
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.check-item:last-child { border-bottom: none; }
+.check-box {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+  transition: all 0.15s;
+  margin-top: 1px;
+}
+.check-item.checked .check-box {
+  background: var(--kakao);
+  border-color: var(--kakao);
+}
+.check-text { flex: 1; }
+.check-title { font-size: 15px; font-weight: 600; }
+.check-desc { font-size: 13px; color: var(--text-sub); margin-top: 3px; }
+.check-item.checked .check-title { color: var(--text-sub); text-decoration: line-through; }
+
+.check-progress {
+  background: var(--kakao);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.check-progress-text { font-size: 15px; font-weight: 700; color: var(--kakao-brown); }
+.check-progress-num { font-size: 28px; font-weight: 900; color: var(--kakao-brown); }
+
+/* ── AI ANALYSIS ── */
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.upload-area:active { border-color: var(--kakao); }
+.upload-icon { font-size: 48px; margin-bottom: 12px; }
+.upload-text { font-size: 15px; font-weight: 600; color: var(--text-sub); }
+.upload-hint { font-size: 13px; color: var(--text-sub); margin-top: 6px; }
+
+.img-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+.img-cell { position: relative; aspect-ratio: 1; }
+.img-cell img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.img-num {
+  position: absolute;
+  top: 4px; left: 4px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+
+.ai-result {
+  background: linear-gradient(135deg, #FFFDE7, #FFF9C4);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 12px;
+}
+.ai-score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ai-score-num {
+  font-size: 52px;
+  font-weight: 900;
+  color: var(--kakao-brown);
+  line-height: 1;
+}
+.ai-score-label { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+.ai-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.ai-point:last-of-type { border-bottom: none; }
+.ai-point-icon { font-size: 20px; flex-shrink: 0; }
+.ai-point-text { font-size: 14px; line-height: 1.5; }
+.ai-suggestion {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--kakao-brown);
+}
+
+/* ── REVENUE ── */
+.revenue-summary {
+  background: var(--kakao);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.revenue-total-label { font-size: 13px; color: var(--kakao-brown); opacity: 0.7; }
+.revenue-total-num { font-size: 36px; font-weight: 900; color: var(--kakao-brown); line-height: 1.2; }
+.revenue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.revenue-item:last-child { border-bottom: none; }
+.revenue-month { font-size: 15px; font-weight: 700; }
+.revenue-note { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.value.plus { color: var(--green); font-weight: 700; font-size: 16px; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 54px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn:active { opacity: 0.85; transform: scale(0.98); }
+.btn-kakao { background: var(--kakao); color: var(--kakao-brown); }
+.btn-dark   { background: var(--kakao-brown); color: #fff; }
+.btn-ghost  { background: var(--bg); color: var(--text); }
+.btn:disabled { opacity: 0.5; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px calc(24px + var(--safe-bottom));
+  width: 100%; max-width: 768px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--kakao-brown);
+}
+
+/* ── FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 14px; font-weight: 600; color: var(--text-sub); margin-bottom: 8px; display: block; }
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  -webkit-appearance: none;
+}
+.form-input:focus { border-color: var(--kakao); }
+.form-select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-bottom) + 16px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--kakao-brown);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ── TIP CARD ── */
+.tip-card {
+  background: linear-gradient(135deg, var(--kakao), #FFD700);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+.tip-label { font-size: 11px; font-weight: 700; color: var(--kakao-brown); opacity: 0.6; letter-spacing: 0.5px; text-transform: uppercase; }
+.tip-text { font-size: 15px; font-weight: 600; color: var(--kakao-brown); margin-top: 6px; line-height: 1.5; }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-sub);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 15px; font-weight: 600; }
+.empty-sub { font-size: 13px; margin-top: 6px; }
+
+/* ── SETTING ── */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-item:last-child { border-bottom: none; }
+.setting-label { font-size: 15px; font-weight: 600; }
+.setting-value { font-size: 14px; color: var(--text-sub); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="header-title">🐱 이모티콘 매니저</div>
+      <div class="header-sub" id="header-sub">오늘도 화이팅!</div>
+    </div>
+    <button class="header-setting-btn" onclick="openModal('modal-setting')">⚙️</button>
+  </div>
+
+  <!-- PAGES -->
+  <div class="page-content">
+
+    <!-- 홈 -->
+    <div id="page-home" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">전체 시리즈</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-reviewing">0</div>
+          <div class="stat-label">심사 중</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-approved">0</div>
+          <div class="stat-label">승인됨 🎉</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-rejected">0</div>
+          <div class="stat-label">반려됨</div>
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-label">💡 오늘의 심사 팁</div>
+        <div class="tip-text" id="daily-tip">로딩 중...</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 최근 시리즈</div>
+        <div id="recent-series">
+          <div class="empty">
+            <div class="empty-icon">🎨</div>
+            <div class="empty-text">아직 시리즈가 없어요</div>
+            <div class="empty-sub">시리즈 탭에서 첫 작품을 등록해보세요!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시리즈 -->
+    <div id="page-series" class="page">
+      <button class="btn btn-kakao" style="margin-bottom:16px" onclick="openModal('modal-series')">
+        ✏️ 새 시리즈 등록
+      </button>
+      <div class="card">
+        <div id="series-list">
+          <div class="empty">
+            <div class="empty-icon">📁</div>
+            <div class="empty-text">등록된 시리즈가 없어요</div>
+            <div class="empty-sub">위 버튼을 눌러 첫 시리즈를 등록하세요!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 체크리스트 -->
+    <div id="page-checklist" class="page">
+      <div class="check-progress">
+        <div>
+          <div class="check-progress-text" id="checklist-msg">제출 전 확인하세요</div>
+          <div style="font-size:12px;color:var(--kakao-brown);opacity:0.7;margin-top:4px">모두 체크해야 제출 가능해요</div>
+        </div>
+        <div class="check-progress-num" id="checklist-count">0/12</div>
+      </div>
+      <div class="card">
+        <div id="checklist-items"></div>
+      </div>
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="resetChecklist()">
+        🔄 체크리스트 초기화
+      </button>
+    </div>
+
+    <!-- AI 분석 -->
+    <div id="page-ai" class="page">
+      <div class="card">
+        <div class="card-title">🤖 AI 심사 피드백</div>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:16px">
+          이모티콘 이미지를 업로드하면 카카오 심사 기준으로 분석해드려요.
+        </p>
+        <input type="file" id="ai-file-input" accept="image/*" multiple style="display:none" onchange="handleAIUpload(event)">
+        <div class="upload-area" onclick="document.getElementById('ai-file-input').click()">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text">이모티콘 이미지 업로드</div>
+          <div class="upload-hint">PNG, GIF • 최대 8장 선택 가능</div>
+        </div>
+        <div id="ai-preview-grid" class="img-preview-grid" style="display:none"></div>
+        <button id="ai-analyze-btn" class="btn btn-dark" style="margin-top:12px;display:none" onclick="analyzeEmoticons()">
+          🤖 AI 분석 시작
+        </button>
+        <div id="ai-result" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- 수익 -->
+    <div id="page-revenue" class="page">
+      <div class="revenue-summary">
+        <div class="revenue-total-label">올해 누적 수익</div>
+        <div class="revenue-total-num" id="revenue-total">0원</div>
+      </div>
+      <button class="btn btn-kakao" style="margin-bottom:16px" onclick="openModal('modal-revenue')">
+        💰 정산 내역 추가
+      </button>
+      <div class="card">
+        <div id="revenue-list">
+          <div class="empty">
+            <div class="empty-icon">💰</div>
+            <div class="empty-text">아직 정산 내역이 없어요</div>
+            <div class="empty-sub">판매 시작 후 정산 내역을 기록해보세요</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-content -->
+
+  <!-- TAB BAR -->
+  <nav class="tab-bar">
+    <button class="tab-item active" onclick="switchTab('home', this)">
+      <span class="icon">🏠</span><span>홈</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('series', this)">
+      <span class="icon">📁</span><span>시리즈</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('checklist', this)">
+      <span class="icon">✅</span><span>체크</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('ai', this)">
+      <span class="icon">🤖</span><span>AI 분석</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('revenue', this)">
+      <span class="icon">💰</span><span>수익</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL: 시리즈 추가 -->
+<div class="modal-overlay" id="modal-series" onclick="closeModalOutside(event, 'modal-series')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ 새 시리즈 등록</div>
+    <div class="form-group">
+      <label class="form-label">시리즈 이름 *</label>
+      <input class="form-input" id="series-title" placeholder="예: 귀여운 토끼 시리즈" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label">현재 상태</label>
+      <select class="form-select" id="series-status">
+        <option value="drafting">✏️ 제작 중</option>
+        <option value="submitted">📤 제출 완료</option>
+        <option value="reviewing">🔍 심사 중</option>
+        <option value="approved">✅ 승인</option>
+        <option value="rejected">❌ 반려</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">메모 (카카오 연락 내용 등)</label>
+      <input class="form-input" id="series-memo" placeholder="예: 5/1 제출, 캐릭터 컨셉 수정 필요" type="text">
+    </div>
+    <button class="btn btn-kakao" onclick="addSeries()">등록하기</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-series')">취소</button>
+  </div>
+</div>
+
+<!-- MODAL: 수익 추가 -->
+<div class="modal-overlay" id="modal-revenue" onclick="closeModalOutside(event, 'modal-revenue')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💰 정산 내역 추가</div>
+    <div class="form-group">
+      <label class="form-label">정산 월 *</label>
+      <input class="form-input" id="rev-month" type="month">
+    </div>
+    <div class="form-group">
+      <label class="form-label">총 수익 (원)</label>
+      <input class="form-input" id="rev-gross" type="number" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">카카오 수수료 (원)</label>
+      <input class="form-input" id="rev-fee" type="number" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">세금 (원)</label>
+      <input class="form-input" id="rev-tax" type="number" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">메모</label>
+      <input class="form-input" id="rev-note" placeholder="예: 봄 시즌 판매" type="text">
+    </div>
+    <button class="btn btn-kakao" onclick="addRevenue()">추가하기</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-revenue')">취소</button>
+  </div>
+</div>
+
+<!-- MODAL: 설정 -->
+<div class="modal-overlay" id="modal-setting" onclick="closeModalOutside(event, 'modal-setting')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ 설정</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Claude API 키</div>
+          <div class="setting-value" id="api-key-status">미설정</div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0;margin-top:12px">
+        <input class="form-input" id="api-key-input" type="password" placeholder="sk-ant-api...">
+      </div>
+      <button class="btn btn-kakao" style="margin-top:12px" onclick="saveApiKey()">API 키 저장</button>
+    </div>
+    <div class="card">
+      <div class="setting-item">
+        <div class="setting-label">앱 버전</div>
+        <div class="setting-value">v1.0.0</div>
+      </div>
+      <div class="setting-item">
+        <div class="setting-label">데이터베이스</div>
+        <div class="setting-value" id="db-status">연결 확인 중...</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-setting')">닫기</button>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE CONFIG ──
+const SUPABASE_URL = 'https://nyxcgkhwiwfgvofioqyh.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // TODO: Claude Code에서 실제 키로 교체
+
+async function supaFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...options.headers
+    }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+const db = {
+  from: (table) => ({
+    select: async (cols = '*', opts = {}) => {
+      let qs = `?select=${cols}`;
+      if (opts.order) qs += `&order=${opts.order}`;
+      if (opts.limit) qs += `&limit=${opts.limit}`;
+      if (opts.filter) qs += `&${opts.filter}`;
+      const data = await supaFetch(`/${table}${qs}`);
+      return { data, error: null };
+    },
+    insert: async (row) => {
+      try {
+        const data = await supaFetch(`/${table}`, { method: 'POST', body: JSON.stringify(row) });
+        return { data, error: null };
+      } catch(e) { return { data: null, error: e }; }
+    },
+    update: async (row, filter) => {
+      try {
+        const data = await supaFetch(`/${table}?${filter}`, { method: 'PATCH', body: JSON.stringify(row) });
+        return { data, error: null };
+      } catch(e) { return { data: null, error: e }; }
+    },
+    delete: async (filter) => {
+      try {
+        await supaFetch(`/${table}?${filter}`, { method: 'DELETE', prefer: 'return=minimal' });
+        return { error: null };
+      } catch(e) { return { error: e }; }
+    }
+  })
+};
+
+// ── TIPS ──
+const TIPS = [
+  '감정 표현이 다양할수록 승인 확률이 올라가요! 기쁨, 슬픔, 화남, 당황 등을 골고루 넣어보세요.',
+  '일상에서 자주 쓰는 표현 위주로 구성하면 심사관에게 좋은 인상을 줄 수 있어요.',
+  '캐릭터의 개성이 뚜렷할수록 심사에서 유리해요. 독특한 특징을 살려보세요.',
+  '비슷한 표정이나 포즈가 반복되면 감점 요인이 될 수 있어요. 다양하게 구성하세요.',
+  '배경은 반드시 투명(PNG)으로 내보내야 해요. Procreate에서 배경 레이어를 꺼주세요.',
+  '이모티콘 크기는 360×360px, 용량은 개당 500KB 이하로 맞춰주세요.',
+  '반려되어도 포기하지 마세요! 수정 후 재제출은 횟수 제한이 없어요.',
+  '심사 기간은 보통 8~13일이에요. 기다리는 동안 다음 시리즈를 준비해보세요!'
+];
+
+// ── TAB ──
+function switchTab(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  el.classList.add('active');
+  if (name === 'home') loadDashboard();
+  if (name === 'series') loadSeries();
+  if (name === 'revenue') loadRevenue();
+  if (name === 'checklist') renderChecklist();
+}
+
+// ── MODAL ──
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function closeModalOutside(e, id) {
+  if (e.target.id === id) closeModal(id);
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── STATUS ──
+const STATUS_LABEL = {
+  drafting: '제작 중', submitted: '제출 완료',
+  reviewing: '심사 중', approved: '승인', rejected: '반려'
+};
+function statusBadge(s) {
+  return `<span class="badge badge-${s}">${STATUS_LABEL[s] || s}</span>`;
+}
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  document.getElementById('daily-tip').textContent = TIPS[new Date().getDate() % TIPS.length];
+  try {
+    const { data } = await db.from('series').select('id,title,status,created_at', { order: 'created_at.desc' });
+    if (!data) return;
+    const counts = { total: data.length, reviewing: 0, approved: 0, rejected: 0 };
+    data.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
+    document.getElementById('stat-total').textContent = counts.total;
+    document.getElementById('stat-reviewing').textContent = counts.reviewing;
+    document.getElementById('stat-approved').textContent = counts.approved;
+    document.getElementById('stat-rejected').textContent = counts.rejected;
+
+    const recent = data.slice(0, 3);
+    document.getElementById('recent-series').innerHTML = recent.length ? recent.map(s => `
+      <div class="series-item">
+        <div class="series-thumb">🐱</div>
+        <div class="series-info">
+          <div class="series-name">${s.title}</div>
+          <div class="series-date">${statusBadge(s.status)}</div>
+        </div>
+        <div class="series-arrow">›</div>
+      </div>
+    `).join('') : `<div class="empty"><div class="empty-icon">🎨</div><div class="empty-text">시리즈를 등록해보세요!</div></div>`;
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ── SERIES ──
+async function loadSeries() {
+  try {
+    const { data } = await db.from('series').select('*', { order: 'created_at.desc' });
+    document.getElementById('series-list').innerHTML = data && data.length ? data.map(s => `
+      <div class="series-item">
+        <div class="series-thumb">🐱</div>
+        <div class="series-info">
+          <div class="series-name">${s.title}</div>
+          <div class="series-date">
+            ${statusBadge(s.status)}
+            ${s.memo ? `<span style="font-size:12px;color:var(--text-sub);margin-left:6px">${s.memo}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('') : `<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">아직 시리즈가 없어요</div></div>`;
+  } catch(e) { showToast('데이터를 불러오지 못했어요'); }
+}
+
+async function addSeries() {
+  const title = document.getElementById('series-title').value.trim();
+  if (!title) { showToast('시리즈 이름을 입력해주세요'); return; }
+  const { error } = await db.from('series').insert({
+    title,
+    status: document.getElementById('series-status').value,
+    memo: document.getElementById('series-memo').value.trim()
+  });
+  if (error) { showToast('저장 중 오류가 발생했어요'); return; }
+  closeModal('modal-series');
+  document.getElementById('series-title').value = '';
+  document.getElementById('series-memo').value = '';
+  showToast('✅ 시리즈가 등록됐어요!');
+  loadSeries();
+}
+
+// ── CHECKLIST ──
+const CHECKLIST = [
+  { title: '이모티콘 수량 확인', desc: '총 24개 (멈춰있는 이모티콘 기준)' },
+  { title: '파일 형식 확인', desc: 'PNG (투명 배경) 또는 GIF (움직이는 이모티콘)' },
+  { title: '이미지 크기 확인', desc: '360×360px (각 이모티콘)' },
+  { title: '메인 이미지 준비', desc: '360×360px, 대표 이모티콘 1장' },
+  { title: '탭 이미지 준비', desc: '130×130px, 썸네일용 1장' },
+  { title: '파일 용량 확인', desc: '각 파일 500KB 이하' },
+  { title: '배경 투명 확인', desc: 'Procreate에서 배경 레이어 OFF 후 PNG 내보내기' },
+  { title: '감정 표현 다양성', desc: '기쁨, 슬픔, 화남, 당황 등 다양한 감정 포함' },
+  { title: '타 브랜드/로고 없음', desc: '실존 브랜드, 로고, 캐릭터 미포함 확인' },
+  { title: '실존 인물 없음', desc: '유명인, 연예인 등 실존 인물 표현 없음' },
+  { title: '선정적/폭력적 표현 없음', desc: '카카오 심사 기준 위반 요소 없음' },
+  { title: '텍스트 가독성 확인', desc: '작은 화면에서도 텍스트가 잘 보이는지 확인' },
+];
+
+let checkState = JSON.parse(localStorage.getItem('checkState') || '{}');
+
+function renderChecklist() {
+  const done = CHECKLIST.filter((_, i) => checkState[i]).length;
+  document.getElementById('checklist-count').textContent = `${done}/${CHECKLIST.length}`;
+  document.getElementById('checklist-msg').textContent =
+    done === CHECKLIST.length ? '🎉 모두 완료! 제출 준비 됐어요!' : `${done}개 완료, ${CHECKLIST.length - done}개 남았어요`;
+
+  document.getElementById('checklist-items').innerHTML = CHECKLIST.map((item, i) => `
+    <div class="check-item ${checkState[i] ? 'checked' : ''}" onclick="toggleCheck(${i})">
+      <div class="check-box">${checkState[i] ? '✓' : ''}</div>
+      <div class="check-text">
+        <div class="check-title">${item.title}</div>
+        <div class="check-desc">${item.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleCheck(i) {
+  checkState[i] = !checkState[i];
+  localStorage.setItem('checkState', JSON.stringify(checkState));
+  renderChecklist();
+}
+
+function resetChecklist() {
+  if (!confirm('체크리스트를 초기화할까요?')) return;
+  checkState = {};
+  localStorage.setItem('checkState', JSON.stringify(checkState));
+  renderChecklist();
+  showToast('🔄 체크리스트가 초기화됐어요');
+}
+
+// ── AI ANALYSIS ──
+let aiFiles = [];
+
+function handleAIUpload(e) {
+  aiFiles = Array.from(e.target.files).slice(0, 8);
+  if (!aiFiles.length) return;
+  const grid = document.getElementById('ai-preview-grid');
+  grid.style.display = 'grid';
+  grid.innerHTML = aiFiles.map((f, i) => `
+    <div class="img-cell">
+      <img src="${URL.createObjectURL(f)}" />
+      <div class="img-num">${i + 1}</div>
+    </div>
+  `).join('');
+  document.getElementById('ai-analyze-btn').style.display = 'flex';
+  document.getElementById('ai-result').style.display = 'none';
+}
+
+async function analyzeEmoticons() {
+  const apiKey = localStorage.getItem('claudeApiKey');
+  if (!apiKey) {
+    showToast('먼저 설정에서 Claude API 키를 입력해주세요');
+    openModal('modal-setting');
+    return;
+  }
+  if (!aiFiles.length) return;
+
+  const btn = document.getElementById('ai-analyze-btn');
+  btn.textContent = '🤖 분석 중...';
+  btn.disabled = true;
+
+  try {
+    const file = aiFiles[0];
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-calls': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `당신은 카카오 이모티콘 심사 전문가입니다. 이모티콘 이미지를 분석하여 카카오 심사 기준으로 평가해주세요. 반드시 아래 JSON 형식으로만 응답하세요. 마크다운 코드블록 없이 순수 JSON만 반환하세요:
+{"score":숫자(0-100),"points":[{"icon":"이모지","text":"평가내용"},{"icon":"이모지","text":"평가내용"},{"icon":"이모지","text":"평가내용"}],"suggestion":"구체적인 개선 제안 3-4문장"}`,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: file.type || 'image/png', data: base64 } },
+            { type: 'text', text: '이 이모티콘을 카카오 심사 기준으로 분석해주세요.' }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '';
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    const scoreColor = result.score >= 70 ? '#00C471' : result.score >= 50 ? '#FF8C42' : '#FF4B4B';
+    document.getElementById('ai-result').style.display = 'block';
+    document.getElementById('ai-result').innerHTML = `
+      <div class="ai-result">
+        <div class="ai-score">
+          <div>
+            <div class="ai-score-num" style="color:${scoreColor}">${result.score}</div>
+            <div class="ai-score-label">/ 100점</div>
+          </div>
+          <div style="font-size:14px;color:var(--text-sub);line-height:1.5">
+            ${result.score >= 70 ? '✅ 제출 가능 수준이에요!' : result.score >= 50 ? '🔥 조금만 더 다듬어봐요' : '💪 개선이 필요해요'}
+          </div>
+        </div>
+        ${result.points.map(p => `
+          <div class="ai-point">
+            <div class="ai-point-icon">${p.icon}</div>
+            <div class="ai-point-text">${p.text}</div>
+          </div>
+        `).join('')}
+        <div class="ai-suggestion">💬 ${result.suggestion}</div>
+      </div>
+    `;
+  } catch(e) {
+    showToast('분석 중 오류가 발생했어요. API 키를 확인해주세요.');
+    console.error(e);
+  } finally {
+    btn.textContent = '🤖 다시 분석';
+    btn.disabled = false;
+  }
+}
+
+// ── REVENUE ──
+async function loadRevenue() {
+  try {
+    const year = new Date().getFullYear();
+    const { data } = await db.from('revenue').select('*', { order: 'month.desc' });
+    const yearData = (data || []).filter(r => r.month?.startsWith(year));
+    const total = yearData.reduce((s, r) => s + (r.net_amount || 0), 0);
+    document.getElementById('revenue-total').textContent = total.toLocaleString() + '원';
+
+    document.getElementById('revenue-list').innerHTML = (data || []).length ? data.map(r => `
+      <div class="revenue-item">
+        <div>
+          <div class="revenue-month">${r.month}</div>
+          <div class="revenue-note">${r.note || ''}</div>
+        </div>
+        <div class="value plus">+${(r.net_amount || 0).toLocaleString()}원</div>
+      </div>
+    `).join('') : `<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">정산 내역이 없어요</div></div>`;
+  } catch(e) { showToast('데이터를 불러오지 못했어요'); }
+}
+
+async function addRevenue() {
+  const month = document.getElementById('rev-month').value;
+  if (!month) { showToast('정산 월을 선택해주세요'); return; }
+  const gross = parseInt(document.getElementById('rev-gross').value) || 0;
+  const fee = parseInt(document.getElementById('rev-fee').value) || 0;
+  const tax = parseInt(document.getElementById('rev-tax').value) || 0;
+  const { error } = await db.from('revenue').insert({
+    month, gross_amount: gross, kakao_fee: fee, tax,
+    net_amount: gross - fee - tax,
+    note: document.getElementById('rev-note').value.trim()
+  });
+  if (error) { showToast('저장 중 오류가 발생했어요'); return; }
+  closeModal('modal-revenue');
+  showToast('✅ 정산 내역이 추가됐어요!');
+  loadRevenue();
+}
+
+// ── SETTINGS ──
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { showToast('API 키를 입력해주세요'); return; }
+  localStorage.setItem('claudeApiKey', key);
+  document.getElementById('api-key-status').textContent = '✅ 설정됨';
+  document.getElementById('api-key-input').value = '';
+  showToast('✅ API 키가 저장됐어요');
+}
+
+async function checkDbConnection() {
+  try {
+    await supaFetch('/series?limit=1');
+    document.getElementById('db-status').textContent = '✅ 연결됨';
+  } catch(e) {
+    document.getElementById('db-status').textContent = '❌ 연결 실패';
+  }
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  // PWA 서비스 워커 등록
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+  // 설정 상태 복원
+  if (localStorage.getItem('claudeApiKey')) {
+    document.getElementById('api-key-status').textContent = '✅ 설정됨';
+  }
+  // 헤더 날짜
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const now = new Date();
+  document.getElementById('header-sub').textContent =
+    `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+
+  loadDashboard();
+  checkDbConnection();
+});
+</script>
+</body>
+</html>
